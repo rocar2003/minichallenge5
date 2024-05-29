@@ -1,0 +1,103 @@
+import rclpy
+from rclpy.node import Node
+import cv2
+import numpy as np
+from geometry_msgs.msg import Twist
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+
+
+class LineFollower(Node):
+    def _init_(self):
+        super()._init_('line_follower_node')
+        self.bridge = CvBridge()
+        #### SUBSCRIBER ####
+        self.sub = self.create_subscription(Image, 'video_source/raw', self.camera_callback, 10)
+        ### PUBLISHER ####
+        self.pub = self.create_publisher(Image, 'processed_img', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
+        
+        # VARIABLES ###
+        self.vel = Twist()
+        self.image_received_flag = False
+        self.kw = 0.03  # Constant for angular velocity 
+        
+        ### TIMER ###
+        dt = 0.1
+        self.timer = self.create_timer(dt, self.timer_callback)
+        self.get_logger().info('Line Follower Node started')
+
+    def camera_callback(self, msg):
+        try:
+            # We select bgr8 because it's the OpenCV encoding by default  
+            self.cv_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.image_received_flag = True
+        except Exception as e:
+            self.get_logger().info(f'Failed to get image: {str(e)}')
+
+    def timer_callback(self):
+        if self.image_received_flag:
+            image = self.cv_img.copy()
+
+            # Flip image vertically and horizontally 
+            image = cv2.flip(image, -1)
+            
+            # Limit the image to only the lowest part 
+            height, width, _ = image.shape
+            roi_height = height // 3  # Use bottom third of the image
+            roi = image[-roi_height:, :]
+
+            grey = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            _, thresholded = cv2.threshold(grey, 100, 255, cv2.THRESH_BINARY_INV)
+
+            cv2.imshow('thresh', thresholded)
+            cv2.imshow('roi', roi)
+            cv2.imshow('image', image)
+            cv2.waitKey(1)
+           
+            contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                # Assume largest contour is line
+                biggest_contour = max(contours, key=cv2.contourArea)
+                M = cv2.moments(biggest_contour)
+                if M['m00'] != 0:
+                    cx = int(M['m10'] / M['m00'])
+                    cy = int(M['m01'] / M['m00'])
+
+                    # Adjust cx, cy to the original image coordinates
+                    cy += (height - roi_height)
+
+                    # Draw a circle at the center of the line
+                    cv2.circle(image, (cx, cy), 10, (0, 255, 0), -1)
+
+                    # Draw a line from the detected point to the bottom center of the image
+                    bottom_center = (width // 2, height)
+                    cv2.line(image, (cx, cy), bottom_center, (0, 255, 0), 2)
+
+                    # Calculate error from center of image
+                    error = cx - width // 2
+                    self.vel.angular.z = self.kw * (-float(error))  
+                    self.vel.linear.x = 0.1  # Constant forward speed
+                    self.get_logger().info('Line detected: ')
+                else:
+                    self.get_logger().info('Moments calculation error')
+                    self.vel.angular.z = 0.0
+                    self.vel.linear.x = 0.0
+            else:
+                self.get_logger().info('No line detected')
+                self.vel.angular.z = 0.0
+                self.vel.linear.x = 0.0
+
+            self.cmd_vel_pub.publish(self.vel)
+            self.pub.publish(self.bridge.cv2_to_imgmsg(image, 'bgr8'))
+            self.get_logger().info(f'Velocity command: x={self.vel.linear.x}, z={self.vel.angular.z}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = LineFollower()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if _name_ == '_main_':
+    main()

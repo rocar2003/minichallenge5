@@ -1,0 +1,36 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/robertog/ros2_ws/install/yolov8_ros2/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/yolo_msg/local/lib/python3.10/dist-packages",
+        "/home/robertog/ros2_ws/install/two_wheeled_robot/local/lib/python3.10/dist-packages",
+        "/home/robertog/ros2_ws/install/programming_assignment/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/open_cv_example/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/mobile_robotics/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge5/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge4_bueno/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge4/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge3/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/mini1_checo/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/gtg_ao/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/GTG_AO/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/robertog/ros2_ws/install/yolov8_ros2/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/yolo_msg/local/lib/python3.10/dist-packages",
+        "/home/robertog/ros2_ws/install/two_wheeled_robot/local/lib/python3.10/dist-packages",
+        "/home/robertog/ros2_ws/install/programming_assignment/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/open_cv_example/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/mobile_robotics/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge5/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge4_bueno/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge4/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/minichallenge3/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/mini1_checo/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/gtg_ao/lib/python3.10/site-packages",
+        "/home/robertog/ros2_ws/install/GTG_AO/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
