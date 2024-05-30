@@ -11,7 +11,7 @@ class LineFollowingRobot(Node):
         self.bridge = CvBridge()
         self.image_subscriber = self.create_subscription(Image, 'video_source/raw', self.image_callback, 10)
         self.image_publisher = self.create_publisher(Image, 'processed_image', 10)
-        self.velocity_publisher = self.create_publisher(Twist, 'cmd_vel_aux', 10)
+        self.velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
         self.robot_velocity = Twist()
         self.image_received = False
         self.timer = self.create_timer(0.1, self.timer_callback)
@@ -20,7 +20,7 @@ class LineFollowingRobot(Node):
         # PID controller parameters
         self.Kp = 0.005
         self.Ki = 0.0
-        self.Kd = 0.001
+        self.Kd = 0.003
 
         # PID controller variables
         self.previous_error = 0
@@ -34,8 +34,11 @@ class LineFollowingRobot(Node):
         self.max_linear_speed = 0.1  # Reduce max linear speed
         self.min_linear_speed = 0.03  # Reduce min linear speed
         self.max_angular_speed = 0.5  # Reduce max angular speed
-        self.min_angular_speed = 0.2  # Reduce min angular speed
+        self.min_angular_speed = 0.35  # Reduce min angular speed
         self.turn_slowdown_threshold = 35  # Error threshold to start slowing down
+
+        # Line position history
+        self.line_position_history = []
 
     def image_callback(self, msg):
         try:
@@ -47,18 +50,20 @@ class LineFollowingRobot(Node):
     def timer_callback(self):
         if self.image_received:
             image = self.cv_image.copy()
-            roi = image[120:240, :]  # Ampliar la región de interés para capturar más área
+            height, width, _ = image.shape
+            # Definir una región de interés (ROI) central más estrecha
+            roi = image[120:240, :]  # Restringir la región de interés horizontalmente
             gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-            _, binary = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY_INV)  # Invertir para que el negro sea blanco
+            _, binary = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)  # Invertir para que el negro sea blanco
 
             contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if contours:
                 # Filtrar contornos basados en posición horizontal y área
                 valid_contours = [c for c in contours if cv2.contourArea(c) > 100]  # Ajustar umbral de área según sea necesario
                 if valid_contours:
-                    # Encontrar el contorno más cercano al centro horizontal de la imagen
-                    image_center = roi.shape[1] // 2
+                    # Encontrar el contorno más cercano al centro de la imagen
+                    roi_center = roi.shape[1] // 2
                     min_distance = float('inf')
                     best_contour = None
 
@@ -66,7 +71,7 @@ class LineFollowingRobot(Node):
                         M = cv2.moments(contour)
                         if M['m00'] != 0:
                             cx = int(M['m10'] / M['m00'])
-                            distance = abs(cx - image_center)
+                            distance = abs(cx - roi_center)
                             if distance < min_distance:
                                 min_distance = distance
                                 best_contour = contour
@@ -74,10 +79,10 @@ class LineFollowingRobot(Node):
                     if best_contour is not None:
                         M = cv2.moments(best_contour)
                         cx = int(M['m10'] / M['m00'])
-                        
+
                         cv2.circle(roi, (cx, int(roi.shape[0] / 2)), 10, (0, 255, 0), -1)
-                        
-                        error = cx - (roi.shape[1] // 2)
+
+                        error = cx - roi_center
 
                         # PID controller calculations
                         self.integral += error
@@ -103,6 +108,11 @@ class LineFollowingRobot(Node):
                         # Update robot velocities
                         self.robot_velocity.angular.z = angular_speed * (-1 if error > 0 else 1)
                         self.robot_velocity.linear.x = linear_speed
+
+                        # Update line position history
+                        self.line_position_history.append(cx)
+                        if len(self.line_position_history) > 5:
+                            self.line_position_history.pop(0)
                     else:
                         self.robot_velocity.angular.z = 0.0
                         self.robot_velocity.linear.x = 0.0
